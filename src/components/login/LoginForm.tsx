@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner"; // Import toast từ sonner
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,68 +23,76 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { AtSign, Lock, Loader2 } from "lucide-react";
+import { useAuthStore } from "@/stores";
 
-// Schema validation không thay đổi
+// Schema validation cho email và password
 const formSchema = z.object({
-  identifier: z
+  email: z
     .string()
-    .min(1, { message: "Vui lòng nhập email hoặc số điện thoại." }),
+    .min(1, { message: "Vui lòng nhập email." })
+    .email({ message: "Email không hợp lệ." }),
   password: z.string().min(1, { message: "Vui lòng nhập mật khẩu." }),
 });
 
-export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
+type FormData = z.infer<typeof formSchema>;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+export default function LoginForm() {
+  const navigate = useNavigate();
+  const { login, isLoading, error, isAuthenticated, user, clearError } =
+    useAuthStore();
+  const justLoggedIn = useRef(false);
+
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      identifier: "",
+      email: "",
       password: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
-
-    try {
-      console.log("Đang gửi thông tin:", values);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      if (
-        values.identifier !== "admin@example.com" ||
-        values.password !== "password"
-      ) {
-        throw new Error("Email hoặc mật khẩu không chính xác.");
+  // Redirect if already authenticated - chỉ redirect, không show toast
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Chỉ show toast nếu vừa mới login thành công
+      if (justLoggedIn.current) {
+        toast.success("Đăng nhập thành công!", {
+          description: "Đang chuyển hướng đến trang quản trị.",
+        });
+        justLoggedIn.current = false;
       }
+      navigate("/admin", { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
-      localStorage.setItem("accessToken", "your_mock_jwt_token");
-
-      // SỬ DỤNG SONNER
-      toast.success("Đăng nhập thành công!", {
-        description: "Đang chuyển hướng đến trang quản trị.",
-      });
-
-      setTimeout(() => {
-        navigate("/admin");
-      }, 1000);
-    } catch (error: any) {
-      // SỬ DỤNG SONNER
+  // Show error toast when error occurs
+  useEffect(() => {
+    if (error) {
       toast.error("Đăng nhập thất bại", {
-        description: error.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
+        description: error,
       });
-    } finally {
-      setIsLoading(false);
+      clearError();
+    }
+  }, [error, clearError]);
+
+  async function onSubmit(values: FormData) {
+    try {
+      justLoggedIn.current = true; // Mark that we just attempted login
+      await login(values);
+      // Success toast will be shown by useEffect when isAuthenticated changes
+    } catch (error) {
+      justLoggedIn.current = false; // Reset flag on error
+      // Error will be handled by useEffect
+      console.error("Login failed:", error);
     }
   }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
       <Card className="w-full max-w-sm mx-4">
-        <CardHeader>
+        <CardHeader className="text-center">
           <CardTitle className="text-2xl">Đăng nhập</CardTitle>
           <CardDescription>
-            Nhập thông tin tài khoản để vào trang quản trị.
+            Nhập thông tin tài khoản để vào hệ thống quản trị.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -92,15 +100,16 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
               <FormField
                 control={form.control}
-                name="identifier"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email / Số điện thoại</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <AtSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="admin@example.com"
+                          type="email"
+                          placeholder="admin@bookingcar.com"
                           className="pl-8"
                           {...field}
                           disabled={isLoading}
@@ -123,7 +132,7 @@ export default function LoginPage() {
                         <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                           type="password"
-                          placeholder="password"
+                          placeholder="Nhập mật khẩu"
                           className="pl-8"
                           {...field}
                           disabled={isLoading}
@@ -135,14 +144,19 @@ export default function LoginPage() {
                 )}
               />
 
-              {/* Chúng ta không cần hiển thị lỗi API riêng biệt nữa vì toast đã làm rất tốt */}
-
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Đăng nhập
               </Button>
             </form>
           </Form>
+
+          {/* Thông tin demo cho việc test */}
+          <div className="mt-4 p-3 bg-muted rounded-md text-sm text-muted-foreground">
+            <p className="font-medium mb-1">Tài khoản demo:</p>
+            <p>Email: admin@bookingcar.com</p>
+            <p>Mật khẩu: Admin@123</p>
+          </div>
         </CardContent>
       </Card>
     </div>
