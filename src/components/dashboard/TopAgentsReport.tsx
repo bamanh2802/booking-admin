@@ -7,7 +7,6 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Crown } from "lucide-react"; // Icon vương miện cho top 1
 
 type AgentPerformance = {

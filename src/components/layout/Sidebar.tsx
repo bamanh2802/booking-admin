@@ -14,7 +14,7 @@ const navItems = [
   { to: "/admin", label: "Tổng quan", icon: BarChart3 },
   { to: "/admin/routes", label: "Quản lý Tuyến xe", icon: Car },
   { to: "/admin/tickets", label: "Quản lý Vé", icon: Ticket },
-  { to: "/admin/accounts", label: "Quản lý Tài khoản", icon: Users },
+  { to: "/admin/users", label: "Quản lý Người dùng", icon: Users },
   { to: "/admin/agents", label: "Quản lý Đại lý", icon: Building },
   { to: "/admin/refunds", label: "Quản lý Hoàn tiền", icon: Wallet },
   { to: "/admin/feedback", label: "Phản hồi", icon: MessageSquare },
