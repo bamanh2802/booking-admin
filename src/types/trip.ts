@@ -4,7 +4,7 @@ import type { BaseEntity } from "./common";
 export interface TripListParams {
   page?: number;
   limit?: number;
-} // Định nghĩa cho một ghế ngồi trong xe
+} 
 export interface Seat {
   code: string;
   floor: number;
