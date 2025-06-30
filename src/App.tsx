@@ -12,7 +12,6 @@ import TicketManagementPage from "./pages/tickets/page";
 import RequestManagementPage from "./pages/requests/page";
 import CommissionManagementPage from "./pages/commission/page";
 
-// Loading fallback component
 function LoadingFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center">
@@ -29,18 +28,11 @@ function App() {
     <ErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          {/* Route cho trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Nhóm các route của trang quản trị */}
           <Route path="/admin" element={<AdminLayout />}>
-            {/* 
-              Route 'index' sẽ được render khi người dùng truy cập vào path cha ("/admin").
-              Đây chính là trang dashboard của chúng ta.
-            */}
             <Route index element={<DashboardPage />} />
 
-            {/* Route cho quản lý người dùng */}
             <Route path="users" element={<UserManagement />} />
             <Route path="trips" element={<TripsManagement />} />
             <Route path="companies" element={<CompanyManagementPage />} />

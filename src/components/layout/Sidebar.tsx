@@ -12,15 +12,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Dữ liệu cho các mục menu (không đổi)
 const navItems = [
-  { to: "/admin", label: "Tổng quan", icon: LayoutDashboard },
-  { to: "/admin/requests", label: "Xử lý Yêu cầu", icon: ListChecks },
-  { to: "/admin/trips", label: "Quản lý Chuyến đi", icon: Bus },
-  { to: "/admin/tickets", label: "Quản lý Vé", icon: Ticket },
-  { to: "/admin/users", label: "Quản lý Người dùng", icon: Users },
-  { to: "/admin/companies", label: "Quản lý Nhà xe", icon: Building },
-  { to: "/admin/commission", label: "Quản lý Hoàn tiền", icon: Wallet },
+  { to: "", label: "Tổng quan", icon: LayoutDashboard },
+  { to: "/requests", label: "Xử lý Yêu cầu", icon: ListChecks },
+  { to: "/trips", label: "Quản lý Chuyến đi", icon: Bus },
+  { to: "/tickets", label: "Quản lý Vé", icon: Ticket },
+  { to: "/users", label: "Quản lý Người dùng", icon: Users },
+  { to: "/companies", label: "Quản lý Nhà xe", icon: Building },
+  { to: "/commission", label: "Quản lý Hoàn tiền", icon: Wallet },
 ];
 
 export function Sidebar() {
