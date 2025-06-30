@@ -16,7 +16,7 @@ import type { ApiResponse } from "@/types/api";
 
 class UserAPI extends BaseAPI {
   constructor() {
-    super("/user");
+    super("/admin/users");
   }
 
   // Authentication endpoints
@@ -30,7 +30,7 @@ class UserAPI extends BaseAPI {
 
   // User management endpoints
   async getUserList(params?: UserListParams): Promise<UserListResponse> {
-    return this.get("/list", params);
+    return this.get("", params);
   }
 
   async createUser(userData: CreateUserRequest): Promise<ApiResponse<User>> {

@@ -1,110 +1,111 @@
-import { DollarSign, Ticket, Users, Wallet } from "lucide-react";
+"use client";
 
+import { useEffect, useState } from "react";
+import { DollarSign, Ticket, HandCoins, Wallet } from "lucide-react";
+import { toast } from "sonner";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
-import { BusCompanyRatings } from "@/components/dashboard/UserRatingChart";
-import { RefundReport } from "@/components/dashboard/RefundReport";
 import { TopAgentsReport } from "@/components/dashboard/TopAgentsReport";
+import { TicketTypePieChart } from "@/components/dashboard/TicketTypePieChart";
+import type { TicketTypeStat } from "@/components/dashboard/TicketTypePieChart";
+import dashboardAPI from "@/services/api/dashboard-api";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const statsData = [
-  {
-    title: "Doanh thu tháng này",
-    value: "125.000.000đ",
-    description: "+20.1% so với tháng trước",
-    icon: DollarSign,
-  },
-  {
-    title: "Vé bán trong tháng",
-    value: "+1,250",
-    description: "+180 vé so với tháng trước",
-    icon: Ticket,
-  },
-  {
-    title: "Người dùng mới (Tháng)",
-    value: "+573",
-    description: "Tổng số người dùng hoạt động: 3,450",
-    icon: Users,
-  },
-  {
-    title: "Tổng tiền đã hoàn (Tháng)",
-    value: "4.560.000đ",
-    description: "Chiếm 3.6% tổng doanh thu",
-    icon: Wallet,
-  },
-];
-const refundReportData = {
-  totalAmount: "4.560.000đ",
-  comparisonText: "-15% so với tháng trước",
-  regularTickets: { count: 320, amount: "2.560.000đ" },
-  vipTickets: { count: 80, amount: "2.000.000đ" },
-};
-const topAgentsData = [
-  { rank: 1, name: "Đại lý An Thịnh", revenue: "45.200.000đ", fallback: "AT" },
-  {
-    rank: 2,
-    name: "Đại lý Vận Tải Sao Việt",
-    revenue: "38.750.000đ",
-    fallback: "SV",
-  },
-  {
-    rank: 3,
-    name: "Đại lý Toàn Thắng",
-    revenue: "31.100.000đ",
-    fallback: "TT",
-  },
-];
-
-// DỮ LIỆU GIẢ LẬP MỚI CHO XẾP HẠNG NHÀ XE
-const topRatedCompanies = [
-  {
-    name: "Nhà xe Phương Trang",
-    avatarFallback: "PT",
-    averageRating: 4.9,
-    totalReviews: 1850,
-  },
-  {
-    name: "Nhà xe Thành Bưởi",
-    avatarFallback: "TB",
-    averageRating: 4.8,
-    totalReviews: 1230,
-  },
-  {
-    name: "Nhà xe Kumho Samco",
-    avatarFallback: "KS",
-    averageRating: 4.7,
-    totalReviews: 980,
-  },
-];
-
-const bottomRatedCompanies = [
-  {
-    name: "Nhà xe Hoàng Long",
-    avatarFallback: "HL",
-    averageRating: 3.5,
-    totalReviews: 450,
-  },
-  {
-    name: "Nhà xe Mai Linh Express",
-    avatarFallback: "ML",
-    averageRating: 3.8,
-    totalReviews: 670,
-  },
-  {
-    name: "Nhà xe Thuận Thảo",
-    avatarFallback: "TT",
-    averageRating: 4.1,
-    totalReviews: 320,
-  },
-];
+interface RevenueData {
+  totalRevenue: number;
+  totalTickets: number;
+  chartData?: any[];
+}
 
 export default function DashboardPage() {
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold tracking-tight">Báo cáo tháng này</h1>
+  const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
+  const [ticketTypeData, setTicketTypeData] = useState<TicketTypeStat[] | null>(
+    null
+  );
+  const [totalCommissions, setTotalCommissions] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [revenuePeriod, _] = useState<"7days" | "1month" | "12months">(
+    "1month"
+  );
 
-      {/* Lưới các thẻ thống kê nhanh (không đổi) */}
+  // --- Logic gọi API ---
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [revenueRes, commissionsRes, ticketTypeRes] = await Promise.all([
+          dashboardAPI.getRevenue({ period: revenuePeriod }),
+          dashboardAPI.getCommissions(),
+          dashboardAPI.getRevenueTicketType(),
+        ]);
+
+        if (revenueRes?.success) setRevenueData(revenueRes.data);
+        if (commissionsRes?.success)
+          setTotalCommissions(commissionsRes.data.totalCalculated);
+        if (ticketTypeRes?.success) setTicketTypeData(ticketTypeRes.data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        toast.error("Lỗi: Không thể tải dữ liệu cho dashboard.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [revenuePeriod]); // Chỉ gọi lại khi period của biểu đồ doanh thu thay đổi
+
+  // Xây dựng mảng `stats` sau khi có dữ liệu
+  const stats = [
+    {
+      title: "Tổng Doanh thu",
+      value: `${revenueData?.totalRevenue.toLocaleString() || 0}đ`,
+      description: "+20.1% so với tháng trước",
+      icon: DollarSign,
+    },
+    {
+      title: "Vé đã bán",
+      value: `+${revenueData?.totalTickets.toLocaleString() || 0}`,
+      description: "+180 vé so với tháng trước",
+      icon: Ticket,
+    },
+    {
+      title: "Tổng Hoa hồng",
+      value: `${totalCommissions.toLocaleString()}đ`,
+      description: "Hoa hồng đã tính cho các đại lý",
+      icon: HandCoins,
+    },
+    {
+      title: "Tổng tiền đã hoàn",
+      value: "4.560.000đ",
+      description: "Chiếm 3.6% tổng doanh thu",
+      icon: Wallet,
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 p-4 md:p-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-lg" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+          <Skeleton className="h-96 rounded-lg lg:col-span-4" />
+          <Skeleton className="h-96 rounded-lg lg:col-span-3" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-80 rounded-lg" />
+          <Skeleton className="h-80 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 p-4 md:p-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statsData.map((stat) => (
+        {stats.map((stat) => (
           <StatCard
             key={stat.title}
             title={stat.title}
@@ -115,15 +116,15 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Layout lưới 2x2 cân đối */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RevenueChart />
-        <BusCompanyRatings
-          top={topRatedCompanies}
-          bottom={bottomRatedCompanies}
-        />
-        <RefundReport data={refundReportData} />
-        <TopAgentsReport agents={topAgentsData} />
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+        <div className="lg:col-span-7">
+          <RevenueChart />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TicketTypePieChart data={ticketTypeData} isLoading={isLoading} />
+        <TopAgentsReport />
       </div>
     </div>
   );

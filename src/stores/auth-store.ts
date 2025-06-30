@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import authAPI from "@/services/api/auth-api";
 import { userAPI } from "../services/api/user-api";
 import type { LoginRequest } from "@/types/auth";
 import type { ApiError } from "@/types/api";
@@ -54,7 +55,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await userAPI.login(credentials);
+          const response = await authAPI.login(credentials);
 
           if (response.success) {
             const { accessToken, refreshToken, ...userData } = response.data;

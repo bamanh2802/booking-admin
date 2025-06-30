@@ -52,3 +52,37 @@ export interface ChartData {
   ticketsSold: number;
   refunds: number;
 } 
+
+export interface ChartDataItem {
+  label: string;    
+  totalRevenue: number;
+  totalTickets: number;
+}
+
+export interface RevenueData {
+  totalRevenue: number;
+  totalTickets: number;
+  chartData: ChartDataItem[];
+}
+
+export interface RevenueResponse {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: RevenueData;
+}
+
+export interface TopAgentStat {
+  totalRevenue: number;
+  ticketSold: number;
+  agentId: string;
+  agentName: string;
+  agentEmail: string;
+}
+
+export interface TopAgentsResponse {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: TopAgentStat[];
+}

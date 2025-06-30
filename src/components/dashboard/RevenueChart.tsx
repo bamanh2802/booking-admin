@@ -1,12 +1,7 @@
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+"use client";
+
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Area,
   AreaChart,
@@ -17,48 +12,54 @@ import {
   CartesianGrid,
 } from "recharts";
 
-// --- DỮ LIỆU GIẢ LẬP (Không đổi) ---
-const randomRevenue = (min: number, max: number) =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
-const monthlyData = Array.from({ length: 12 }, (_, i) => {
-  const month = new Date();
-  month.setMonth(month.getMonth() - (11 - i));
-  return {
-    name: `T${month.getMonth() + 1}`,
-    total: randomRevenue(50_000_000, 200_000_000),
-  };
-});
-const weeklyData = [
-  { name: "Tuần 1", total: randomRevenue(15_000_000, 40_000_000) },
-  { name: "Tuần 2", total: randomRevenue(15_000_000, 40_000_000) },
-  { name: "Tuần 3", total: randomRevenue(15_000_000, 40_000_000) },
-  { name: "Tuần 4", total: randomRevenue(15_000_000, 40_000_000) },
-];
-const dailyData = Array.from({ length: 7 }, (_, i) => {
-  const day = new Date();
-  day.setDate(day.getDate() - (6 - i));
-  const weekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-  return {
-    name: weekdays[day.getDay()],
-    total: randomRevenue(3_000_000, 10_000_000),
-  };
-});
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import dashboardAPI from "@/services/api/dashboard-api";
+import type { ChartDataItem } from "@/types/dashboard";
 
-// Tooltip tùy chỉnh (Không đổi)
+type Period = "7days" | "1month" | "12months";
+
+const formatLabel = (label: string, period: Period): string => {
+  if (period === "12months") {
+    const month = parseInt(label.split("-")[1], 10);
+    return `T${month}`;
+  }
+  if (period === "1month") {
+    const parts = label.split("-");
+    return `${parts[2]}/${parts[1]}`;
+  }
+  const date = new Date(label);
+  const weekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  return weekdays[date.getDay()];
+};
+
+// Tooltip tùy chỉnh, hiển thị cả doanh thu và số vé
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
+    const data = payload[0].payload; // Dữ liệu của điểm đó trên biểu đồ
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col space-y-1">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {label}
-            </span>
+      <div className="rounded-lg border bg-background p-2 shadow-sm min-w-[180px]">
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.70rem] uppercase text-muted-foreground">
+            {label}
+          </span>
+          <div className="flex justify-between items-center">
+            <span className="text-sm">Doanh thu:</span>
             <span className="font-bold text-foreground">
-              {new Intl.NumberFormat("vi-VN", {
-                style: "currency",
-                currency: "VND",
-              }).format(payload[0].value)}
+              {new Intl.NumberFormat("vi-VN").format(data.totalRevenue)} ₫
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm">Số vé:</span>
+            <span className="font-bold text-foreground">
+              {data.totalTickets} vé
             </span>
           </div>
         </div>
@@ -69,28 +70,37 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function RevenueChart() {
-  const [activeData, setActiveData] = useState(weeklyData);
-  const [isLoading, setIsLoading] = useState(false);
+  const [period, setPeriod] = useState<Period>("1month");
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleTabChange = (value: string) => {
-    setIsLoading(true);
-    let newData;
-    switch (value) {
-      case "7d":
-        newData = dailyData;
-        break;
-      case "12m":
-        newData = monthlyData;
-        break;
-      default:
-        newData = weeklyData;
-        break;
-    }
-    setTimeout(() => {
-      setActiveData(newData);
-      setIsLoading(false);
-    }, 300);
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await dashboardAPI.getRevenue({ period });
+        if (response.success) {
+          const formattedData = response.data.chartData.map((item: any) => ({
+            ...item,
+            name: formatLabel(item.label, period),
+          }));
+          setChartData(formattedData);
+          setTotalRevenue(response.data.totalRevenue);
+        } else {
+          toast.error("Không thể tải dữ liệu doanh thu", {
+            description: response.message,
+          });
+        }
+      } catch (error) {
+        toast.error("Lỗi kết nối máy chủ.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [period]);
 
   return (
     <Card>
@@ -99,31 +109,34 @@ export function RevenueChart() {
           <div>
             <CardTitle>Xu hướng Doanh thu</CardTitle>
             <CardDescription>
-              Hiển thị doanh thu theo khoảng thời gian đã chọn.
+              {isLoading
+                ? "Đang tải dữ liệu..."
+                : `Tổng doanh thu trong kỳ: ${new Intl.NumberFormat(
+                    "vi-VN"
+                  ).format(totalRevenue)} ₫`}
             </CardDescription>
           </div>
           <Tabs
-            defaultValue="30d"
+            defaultValue={period}
             className="w-full sm:w-auto"
-            onValueChange={handleTabChange}
+            onValueChange={(value) => setPeriod(value as Period)}
           >
             <TabsList className="grid w-full grid-cols-3 sm:w-auto">
-              <TabsTrigger value="7d">7 ngày</TabsTrigger>
-              <TabsTrigger value="30d">30 ngày</TabsTrigger>
-              <TabsTrigger value="12m">12 tháng</TabsTrigger>
+              <TabsTrigger value="7days">7 ngày</TabsTrigger>
+              <TabsTrigger value="1month">1 tháng</TabsTrigger>
+              <TabsTrigger value="12months">12 tháng</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
       </CardHeader>
       <CardContent className="pl-2">
-        <div
-          className={`transition-opacity duration-300 ${
-            isLoading ? "opacity-30" : "opacity-100"
-          }`}
-        >
+        {isLoading ? (
+          <div className="flex items-center justify-center h-[300px]">
+            <Skeleton className="h-full w-full" />
+          </div>
+        ) : (
           <ResponsiveContainer width="100%" height={300}>
-            {/* THAY ĐỔI TỪ BAR CHART SANG AREA CHART */}
-            <AreaChart data={activeData}>
+            <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop
@@ -140,7 +153,7 @@ export function RevenueChart() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
-                dataKey="name"
+                dataKey="name" // Sử dụng key 'name' đã được format
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
@@ -163,7 +176,7 @@ export function RevenueChart() {
               />
               <Area
                 type="monotone"
-                dataKey="total"
+                dataKey="totalRevenue"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 fillOpacity={1}
@@ -171,7 +184,7 @@ export function RevenueChart() {
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

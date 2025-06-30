@@ -6,6 +6,11 @@ import LoginPage from "./components/login/LoginForm";
 import AdminLayout from "./Layout";
 import DashboardPage from "./pages/dashboard/page";
 import UserManagement from "./pages/users/UserManagement";
+import TripsManagement from "./pages/trips/page";
+import CompanyManagementPage from "./pages/companies/page";
+import TicketManagementPage from "./pages/tickets/page";
+import RequestManagementPage from "./pages/requests/page";
+import CommissionManagementPage from "./pages/commission/page";
 
 // Loading fallback component
 function LoadingFallback() {
@@ -37,12 +42,11 @@ function App() {
 
             {/* Route cho quản lý người dùng */}
             <Route path="users" element={<UserManagement />} />
-
-            {/* 
-              TODO: Thêm các route con khác ở đây sau này. Ví dụ:
-              <Route path="routes" element={<ManageRoutesPage />} />
-              <Route path="tickets" element={<ManageTicketsPage />} /> 
-            */}
+            <Route path="trips" element={<TripsManagement />} />
+            <Route path="companies" element={<CompanyManagementPage />} />
+            <Route path="tickets" element={<TicketManagementPage />} />
+            <Route path="requests" element={<RequestManagementPage />} />
+            <Route path="commission" element={<CommissionManagementPage />} />
           </Route>
 
           {/* Có thể thêm một route mặc định để redirect về login */}

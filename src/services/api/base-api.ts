@@ -46,12 +46,7 @@ apiClient.interceptors.request.use(
 // Response interceptor - Handle responses and errors
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Log response time for debugging
     if (response.config.metadata) {
-      const endTime = new Date();
-      const duration =
-        endTime.getTime() - response.config.metadata.startTime.getTime();
-      console.log(`API Request to ${response.config.url} took ${duration}ms`);
     }
 
     return response;
@@ -155,7 +150,7 @@ export class BaseAPI {
 
   // DELETE request
   async delete<T = any>(path = ""): Promise<T> {
-    const response = await apiClient.delete(`${this.endpoint}${path}`);
+    const response = await apiClient.delete(`${this.endpoint}/${path}`);
     return response.data;
   }
 }

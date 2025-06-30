@@ -1,15 +1,28 @@
-import { useEffect, useState } from "react";
-import { Plus, Search, RefreshCw, Edit, Eye } from "lucide-react";
+"use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState, useMemo } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getFilteredRowModel,
+  flexRender,
+} from "@tanstack/react-table";
+
+import type { ColumnFiltersState } from "@tanstack/react-table";
+
+import { useUserStore } from "@/stores";
+import { useErrorHandler, useSuccessHandler } from "@/hooks/useErrorHandler";
+import type { User } from "@/types/user";
+
+import { DataTableToolbar } from "@/components/users/data-table-toolbar";
+import { getUserColumns } from "@/components/users/columns";
+import { CreateUserDialog } from "@/components/users/CreateUserDialog";
+import { EditUserDialog } from "@/components/users/EditUserDialog";
+import { UserDetailDialog } from "@/components/users/UserDetailDialog";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -18,22 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useUserStore } from "@/stores";
-import { CreateUserDialog } from "@/components/users/CreateUserDialog";
-import { EditUserDialog } from "@/components/users/EditUserDialog";
-import { UserDetailDialog } from "@/components/users/UserDetailDialog";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { Pagination } from "@/components/shared/Pagination";
-import { useErrorHandler, useSuccessHandler } from "@/hooks/useErrorHandler";
-import {
-  getRoleBadgeVariant,
-  getRoleDisplayName,
-  ALL_ROLE_OPTIONS,
-  getRoleBadgeStyle,
-} from "@/constants/roles";
-import type { User } from "@/types/user";
+import { Button } from "@/components/ui/button";
 
 export default function UserManagement() {
   const {
@@ -41,73 +39,30 @@ export default function UserManagement() {
     isLoading,
     isDeleting,
     error,
-    currentPage,
-    totalPages,
-    totalUsers,
-    limit,
     fetchUsers,
     deleteUser,
-    setPage,
-    setLimit,
     clearError,
   } = useUserStore();
 
   const { showSuccess } = useSuccessHandler();
+  useErrorHandler({ error, clearError, title: "Lỗi quản lý người dùng" });
 
-  // Error handling
-  useErrorHandler({
-    error,
-    clearError,
-    title: "Lỗi quản lý người dùng",
-  });
-
-  // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // Search and filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
+  // Table & Filter states
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState("");
 
-  // Load users on component mount
+  // Load users on mount
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Remove auto search when filters change - we'll filter on client now
-  // useEffect(() => {
-  //   handleSearch();
-  // }, [roleFilter]);
-
-  // Handle search button click - now just for manual refresh if needed
-  const handleSearch = () => {
-    fetchUsers(); // Refresh data from server without filters
-  };
-
-  // Handle search input change
-  const handleSearchInputChange = (value: string) => {
-    setSearchTerm(value);
-  };
-
-  // Filter users locally by both search term and role
-  const filteredUsers = users.filter((user) => {
-    // Search filter
-    const matchesSearch = searchTerm.trim()
-      ? user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm)
-      : true;
-
-    // Role filter
-    const matchesRole = roleFilter ? user.roleName === roleFilter : true;
-
-    return matchesSearch && matchesRole;
-  });
-
-  // Handle user actions
+  // User action handlers
   const handleViewUser = (user: User) => {
     setSelectedUser(user);
     setDetailDialogOpen(true);
@@ -118,204 +73,146 @@ export default function UserManagement() {
     setEditDialogOpen(true);
   };
 
-  // Tạm thời ẩn chức năng xóa user
-  // const handleDeleteUser = (user: User) => {
-  //   setSelectedUser(user);
-  //   setDeleteDialogOpen(true);
-  // };
+  // const handleDeleteUser = (user: User) => { ... } // Tạm ẩn
 
   const confirmDelete = async () => {
     if (!selectedUser) return;
-
     try {
       await deleteUser(selectedUser._id);
       showSuccess("Thành công", "Đã xóa người dùng thành công");
       setDeleteDialogOpen(false);
       setSelectedUser(null);
     } catch (error) {
-      // Error will be handled by useErrorHandler
+      /* Handled by hook */
     }
   };
 
+  const columns = useMemo(
+    () => getUserColumns(handleViewUser, handleEditUser),
+    []
+  );
+
+  const table = useReactTable({
+    data: users,
+    columns,
+    state: {
+      columnFilters,
+      globalFilter,
+    },
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Quản lý người dùng
-          </h1>
-          <p className="text-muted-foreground">
-            Quản lý tài khoản người dùng và phân quyền hệ thống
-          </p>
-        </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Thêm người dùng
-        </Button>
-      </div>
-
-      {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm theo email, tên..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearchInputChange(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <div className="min-w-[200px]">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full h-10 px-3 border border-input bg-background rounded-md"
-              >
-                <option value="">Tất cả vai trò</option>
-                {ALL_ROLE_OPTIONS.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button onClick={handleSearch} variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Làm mới
-            </Button>
-          </div>
+          <DataTableToolbar
+            table={table}
+            onAdd={() => setCreateDialogOpen(true)}
+            onRefresh={fetchUsers}
+          />
         </CardContent>
       </Card>
 
       {/* Users table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Danh sách người dùng ({filteredUsers.length})</CardTitle>
-          <CardDescription>
-            {searchTerm.trim() || roleFilter 
-              ? `Hiển thị ${filteredUsers.length} kết quả ${searchTerm.trim() ? 'tìm kiếm' : ''}${searchTerm.trim() && roleFilter ? ' và ' : ''}${roleFilter ? 'lọc theo vai trò' : ''} từ tổng ${users.length} người dùng`
-              : `Trang ${currentPage} / ${totalPages} - Tổng ${totalUsers} người dùng`
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tên</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Số điện thoại</TableHead>
-                    <TableHead>Vai trò</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead className="text-right">Thao tác</TableHead>
+
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user._id}>
-                      <TableCell className="font-medium">
-                        {user.fullName}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={getRoleBadgeVariant(user.roleName)}
-                          style={getRoleBadgeStyle(user.roleName)}
-                        >
-                          {getRoleDisplayName(user.roleName)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(user.createdAt).toLocaleDateString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewUser(user)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {/* Tạm thời ẩn nút xóa user */}
-                          {/* <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user)}
-                            disabled={isDeleting}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button> */}
-                        </div>
-                      </TableCell>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      Không tìm thấy kết quả.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
-              {filteredUsers.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  {searchTerm.trim() || roleFilter
-                    ? "Không tìm thấy người dùng nào phù hợp với điều kiện lọc"
-                    : "Không có người dùng nào"
-                  }
-                </div>
-              )}
-
-              {/* Pagination */}
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                limit={limit}
-                onLimitChange={setLimit}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+          {/* Pagination controls */}
+          <div className="flex items-center justify-end space-x-2 py-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Trang trước
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Trang sau
+            </Button>
+          </div>
+        </>
+      )}
 
       {/* Dialogs */}
       <CreateUserDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
-
       <EditUserDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         user={selectedUser}
       />
-
       <UserDetailDialog
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
         user={selectedUser}
       />
-
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={confirmDelete}
         title="Xóa người dùng"
-        description={`Bạn có chắc chắn muốn xóa người dùng "${selectedUser?.fullName}"? Hành động này không thể hoàn tác.`}
+        description={`Bạn có chắc chắn muốn xóa người dùng "${selectedUser?.fullName}"?`}
         isLoading={isDeleting}
       />
     </div>

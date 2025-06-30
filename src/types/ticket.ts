@@ -1,34 +1,24 @@
 import type { BaseEntity } from "./common";
-import type { BusRoute } from "./route";
 import type { User } from "./user";
+import type { Seat } from "./trip";
 
 // Ticket related types
 export interface Ticket extends BaseEntity {
-  ticketCode: string;
-  routeId: string;
-  route?: BusRoute;
-  customerId: string;
-  customer?: User;
-  agentId?: string; // ID of agent who sold the ticket
-  agent?: User;
-  seatNumber: string;
-  departureTime: string;
-  status: "booked" | "used" | "cancelled" | "pending_confirmation";
+  userId: string;
+  tripId: string;
+  requestId: string;
   price: number;
-  paymentMethod: "cash" | "transfer" | "card";
-  paymentStatus: "pending" | "completed" | "failed" | "refunded";
-  bookingDate: string;
-  notes?: string;
-}
-
-export interface TicketFilters {
-  status?: Ticket["status"][];
-  routeId?: string;
-  customerId?: string;
-  agentId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  paymentStatus?: Ticket["paymentStatus"][];
+  status: 'Confirmed' | 'Cancelled' | 'Refunded';
+  passengerName: string;
+  passengerPhone: string;
+  seats: Seat[];
+  type: 'Regular' | 'VIP';
+  createdBy: string | null;
+  commissionPaid: boolean;
+  pickupStation: string;
+  dropoffStation: string;
+  tripInfo: TripInfo;
+  carCompanyInfo: CarCompanyInfoInTicket;
 }
 
 // Refund related types
@@ -69,3 +59,49 @@ export interface Feedback extends BaseEntity {
   respondedByUser?: User;
   respondedAt?: string;
 } 
+
+export interface TripInfo {
+  _id: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+  location: string;
+  station: string;
+  time: string;
+  totalSeats: number;
+  availableSeats: number;
+  carCompanyId: string;
+}
+
+interface CarCompanyInfoInTicket {
+  _id: string;
+  name: string;
+  description: string;
+  hotline: string;
+  type: 'Regular' | 'VIP';
+  totalSeats: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketListResponse {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: {
+    results: Ticket[];
+    pagination: {
+      total: number;
+      page: string | number;
+      limit: number;
+      totalPages: number;
+    };
+  };
+}
+
+export interface TicketUpdatePayload {
+  passengerName?: string;
+  passengerPhone?: string;
+  seats: Seat[]
+}
+
