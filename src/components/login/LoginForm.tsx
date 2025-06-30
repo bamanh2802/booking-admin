@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -38,9 +38,12 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function LoginForm() {
   const navigate = useNavigate();
-  const { login, isLoading, error, isAuthenticated, user, clearError } =
+  const location = useLocation();
+  const { login, isLoading, error, isAuthenticated, clearError } =
     useAuthStore();
-  const justLoggedIn = useRef(false);
+
+  // Xác định đường dẫn sẽ chuyển hướng đến sau khi đăng nhập thành công
+  const from = location.state?.from?.pathname || "/";
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -50,21 +53,14 @@ export default function LoginForm() {
     },
   });
 
-  // Redirect if already authenticated - chỉ redirect, không show toast
+  // Chuyển hướng nếu đã đăng nhập
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Chỉ show toast nếu vừa mới login thành công
-      if (justLoggedIn.current) {
-        toast.success("Đăng nhập thành công!", {
-          description: "Đang chuyển hướng đến trang quản trị.",
-        });
-        justLoggedIn.current = false;
-      }
-      navigate("/admin", { replace: true });
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, navigate, from]);
 
-  // Show error toast when error occurs
+  // Hiển thị toast lỗi
   useEffect(() => {
     if (error) {
       toast.error("Đăng nhập thất bại", {
@@ -76,13 +72,16 @@ export default function LoginForm() {
 
   async function onSubmit(values: FormData) {
     try {
-      justLoggedIn.current = true; // Mark that we just attempted login
       await login(values);
-      // Success toast will be shown by useEffect when isAuthenticated changes
-    } catch (error) {
-      justLoggedIn.current = false; // Reset flag on error
-      // Error will be handled by useEffect
-      console.error("Login failed:", error);
+      // Logic chuyển trang đã được xử lý bởi useEffect ở trên
+      toast.success("Đăng nhập thành công!", {
+        description: `Đang chuyển hướng đến trang ${
+          from === "/" ? "chủ" : from
+        }.`,
+      });
+    } catch (err) {
+      // Lỗi đã được xử lý bởi useEffect, không cần làm gì thêm ở đây
+      console.error("Login failed on submit:", err);
     }
   }
 

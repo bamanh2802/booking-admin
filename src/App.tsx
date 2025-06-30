@@ -41,7 +41,6 @@ function App() {
             <Route path="commission" element={<CommissionManagementPage />} />
           </Route>
 
-          {/* Có thể thêm một route mặc định để redirect về login */}
           <Route path="*" element={<LoginPage />} />
         </Routes>
         <Toaster richColors position="top-right" />

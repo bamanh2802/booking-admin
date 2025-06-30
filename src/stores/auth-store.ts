@@ -39,6 +39,7 @@ interface AuthActions {
 
 type AuthStore = AuthState & AuthActions;
 
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -60,7 +61,6 @@ export const useAuthStore = create<AuthStore>()(
           if (response.success) {
             const { accessToken, refreshToken, ...userData } = response.data;
 
-            // Store tokens
             localStorage.setItem("accessToken", accessToken);
             if (refreshToken) {
               localStorage.setItem("refreshToken", refreshToken);

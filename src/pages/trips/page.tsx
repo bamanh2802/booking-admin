@@ -5,7 +5,6 @@ import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import type { PaginationState } from "@tanstack/react-table";
 import { toast } from "sonner";
 
-// API & Types
 import tripAPI from "@/services/api/trip-api";
 import type {
   Trip,
@@ -13,7 +12,6 @@ import type {
   TripStatus,
 } from "@/types/trip";
 
-// Components chuyên biệt cho trang này
 import { getColumns } from "@/components/trips/columns";
 import { TripForm } from "@/components/trips/trip-form";
 import { TripDetails } from "@/components/trips/trip-details";
@@ -88,9 +86,6 @@ export default function TripManagementPage() {
     try {
       const params = {
         page: pageIndex + 1,
-        limit: pageSize,
-        ...(filters.query && { location: filters.query }), // `location` là param tìm kiếm
-        ...(filters.status.length > 0 && { status: filters.status.join(",") }),
       };
       const response = await tripAPI.getAllTrip(params);
       if (response.success) {
@@ -109,10 +104,8 @@ export default function TripManagementPage() {
     }
   };
 
-  // useEffect để theo dõi và gọi lại API, có debounce cho ô tìm kiếm
   useEffect(() => {
     const handler = setTimeout(() => {
-      // Đặt lại trang về 0 khi filter thay đổi để tránh lỗi trang không tồn tại
       if (table.getState().pagination.pageIndex !== 0) {
         table.setPageIndex(0);
       } else {
