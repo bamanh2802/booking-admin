@@ -34,7 +34,7 @@ class UserAPI extends BaseAPI {
   }
 
   async createUser(userData: CreateUserRequest): Promise<ApiResponse<User>> {
-    return this.post("/create", userData);
+    return this.post("/", userData);
   }
 
   async getUserById(userId: string): Promise<UserDetailResponse> {
