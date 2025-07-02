@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import { Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
@@ -13,6 +15,9 @@ import RequestManagementPage from "./pages/requests/page";
 import CommissionManagementPage from "./pages/commission/page";
 import { WebSocketNotifier } from "./hooks/WebSocketNotifier";
 import QuickActionsPage from "./pages/quickaction/page";
+
+// --- BƯỚC 1: IMPORT COMPONENT NOT FOUND ---
+import NotFoundPage from "./pages/error/NotFoundPage";
 
 function LoadingFallback() {
   return (
@@ -30,11 +35,12 @@ function App() {
     <ErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
+          {/* Route cho trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
 
+          {/* Các route được bảo vệ bên trong AdminLayout */}
           <Route path="" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
-
             <Route path="users" element={<UserManagement />} />
             <Route path="trips" element={<TripsManagement />} />
             <Route path="companies" element={<CompanyManagementPage />} />
@@ -44,7 +50,9 @@ function App() {
             <Route path="quick-actions" element={<QuickActionsPage />} />
           </Route>
 
-          <Route path="*" element={<LoginPage />} />
+          {/* --- BƯỚC 2: SỬA LẠI ROUTE WILDCARD --- */}
+          {/* Route này sẽ khớp với bất kỳ đường dẫn nào không khớp ở trên */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <WebSocketNotifier />
         <Toaster richColors position="top-right" />
