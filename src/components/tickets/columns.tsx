@@ -67,9 +67,9 @@ export const getTicketColumns = (
     header: "Thông tin chuyến đi",
     cell: ({ row }) => (
       <div>
-        <div className="font-medium">{row.original.tripInfo.location}</div>
+        <div className="font-medium">{row.original.tripInfo?.location}</div>
         <div className="text-muted-foreground text-sm">
-          {formatDateTime(row.original.tripInfo.startTime)}
+          {formatDateTime(row.original.tripInfo?.startTime)}
         </div>
       </div>
     ),
