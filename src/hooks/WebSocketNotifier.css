@@ -1,0 +1,78 @@
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 320px;
+}
+
+.notification-toast {
+  background-color: #fff;
+  color: #333;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 5px solid #ccc;
+  animation: slideIn 0.3s ease-out;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Styling cho các loại thông báo khác nhau */
+.notification-toast.info {
+  border-left-color: #2196f3;
+}
+.notification-toast.success {
+  border-left-color: #4caf50;
+}
+.notification-toast.warning {
+  border-left-color: #ff9800;
+}
+.notification-toast.error {
+  border-left-color: #f44336;
+}
+
+.notification-content strong {
+  font-size: 1rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.notification-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.dismiss-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 5px;
+  align-self: flex-start; /* Canh nút dismiss lên trên cùng */
+}
+
+.dismiss-btn:hover {
+  color: #333;
+}

@@ -12,7 +12,7 @@ declare module "axios" {
 
 // Base API configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_TIMEOUT = 30000; // 30 seconds
+const API_TIMEOUT = 30000; 
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({

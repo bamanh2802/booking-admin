@@ -9,11 +9,13 @@ import {
   Building,
   Bus,
   ListChecks,
+  SquareActivity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "", label: "Tổng quan", icon: LayoutDashboard },
+  { to: "/quick-actions", label: "Quản lý Hành động", icon: SquareActivity },
   { to: "/requests", label: "Xử lý Yêu cầu", icon: ListChecks },
   { to: "/trips", label: "Quản lý Chuyến đi", icon: Bus },
   { to: "/tickets", label: "Quản lý Vé", icon: Ticket },

@@ -11,6 +11,8 @@ import CompanyManagementPage from "./pages/companies/page";
 import TicketManagementPage from "./pages/tickets/page";
 import RequestManagementPage from "./pages/requests/page";
 import CommissionManagementPage from "./pages/commission/page";
+import { WebSocketNotifier } from "./hooks/WebSocketNotifier";
+import QuickActionsPage from "./pages/quickaction/page";
 
 function LoadingFallback() {
   return (
@@ -39,10 +41,12 @@ function App() {
             <Route path="tickets" element={<TicketManagementPage />} />
             <Route path="requests" element={<RequestManagementPage />} />
             <Route path="commission" element={<CommissionManagementPage />} />
+            <Route path="quick-actions" element={<QuickActionsPage />} />
           </Route>
 
           <Route path="*" element={<LoginPage />} />
         </Routes>
+        <WebSocketNotifier />
         <Toaster richColors position="top-right" />
       </Suspense>
     </ErrorBoundary>
