@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,9 @@ import companiesAPI from "@/services/api/car-company";
 import tripAPI from "@/services/api/trip-api";
 import type { CarCompany } from "@/types/car-company";
 import { DateTimePicker } from "@/components/shared/DateTimePicker";
+import { Separator } from "@/components/ui/separator";
 
-// 1. Zod Schema
+// 1. Zod Schema (Không thay đổi)
 const tripFormSchema = z
   .object({
     startLocation: z.string().min(1, "Điểm đi không được để trống."),
@@ -51,14 +52,14 @@ const tripFormSchema = z
 
 type TripFormValues = z.infer<typeof tripFormSchema>;
 
-// 2. Component Props
+// 2. Component Props (Không thay đổi)
 interface TripFormProps {
   initialData: Trip | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-// 3. Component chính
+// 3. Component chính (Đã được thiết kế lại)
 export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
   const [companies, setCompanies] = useState<CarCompany[]>([]);
   const [isFetchingCompanies, setIsFetchingCompanies] = useState(true);
@@ -87,6 +88,7 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
   const { isDirty } = form.formState;
 
   useEffect(() => {
+    // ... (logic fetch companies không đổi)
     const fetchCompanies = async () => {
       setIsFetchingCompanies(true);
       try {
@@ -103,6 +105,7 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
   }, []);
 
   const handleCompanyChange = (companyId: string) => {
+    // ... (logic không đổi)
     const selectedCompany = companies.find((c) => c._id === companyId);
     if (selectedCompany) {
       form.setValue("carCompanyId", companyId, { shouldDirty: true });
@@ -113,7 +116,63 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
     }
   };
 
+  // =================================================================
+  // === ✨ CÁC HÀM XỬ LÝ CHO THAO TÁC NHANH ✨ ===
+  // =================================================================
+
+  /**
+   * Hoán đổi điểm đi/đến và bến đi/đến để tạo chuyến về
+   */
+  const handleCreateReturnTrip = () => {
+    const { startLocation, endLocation, startStation, endStation } =
+      form.getValues();
+    form.setValue("startLocation", endLocation, { shouldDirty: true });
+    form.setValue("endLocation", startLocation, { shouldDirty: true });
+    form.setValue("startStation", endStation, { shouldDirty: true });
+    form.setValue("endStation", startStation, { shouldDirty: true });
+    toast.info("Đã hoán đổi điểm đi và điểm đến.");
+  };
+
+  /**
+   * Thay đổi thời gian khởi hành và thời gian đến một khoảng nhất định
+   * @param days - Số ngày để cộng/trừ
+   * @param hours - Số giờ để cộng/trừ
+   */
+  const handleTimeShift = (days: number, hours: number) => {
+    const currentStartTime = form.getValues("startTime");
+    const currentEndTime = form.getValues("endTime");
+
+    if (!currentStartTime || !currentEndTime) {
+      toast.error("Vui lòng chọn thời gian đi và đến trước.");
+      return;
+    }
+
+    const newStartTime = new Date(currentStartTime);
+    newStartTime.setDate(newStartTime.getDate() + days);
+    newStartTime.setHours(newStartTime.getHours() + hours);
+
+    const newEndTime = new Date(currentEndTime);
+    newEndTime.setDate(newEndTime.getDate() + days);
+    newEndTime.setHours(newEndTime.getHours() + hours);
+
+    form.setValue("startTime", newStartTime, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue("endTime", newEndTime, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    toast.info(
+      `Đã điều chỉnh thời gian: ${days > 0 ? `+${days}` : days} ngày, ${
+        hours > 0 ? `+${hours}` : hours
+      } giờ.`
+    );
+  };
+
   const onSubmit = async (data: TripFormValues) => {
+    // ... (logic submit không đổi)
     if (isEditMode && !isDirty) {
       toast.info("Không có thay đổi để lưu.");
       return;
@@ -132,17 +191,13 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
       payload.status = "Not Started";
     }
 
-    const promise = () => {
-      if (isEditMode) {
-        return tripAPI.updateTrip(initialData._id, payload);
-      } else {
-        return tripAPI.createTrip(payload);
-      }
-    };
+    const promise = isEditMode
+      ? tripAPI.updateTrip(initialData._id, payload)
+      : tripAPI.createTrip(payload);
 
     await toast.promise(promise, {
       loading: "Đang xử lý...",
-      success: () => {
+      success: (res) => {
         onSuccess();
         return isEditMode
           ? "Đã cập nhật chuyến đi thành công."
@@ -157,8 +212,62 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-9">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 p-4 md:p-6"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* === ✨ KHU VỰC THAO TÁC NHANH ✨ === */}
+          <div className="md:col-span-2 space-y-3 p-4 bg-muted/50 rounded-lg border">
+            <FormLabel className="text-base font-semibold">
+              Thao tác nhanh
+            </FormLabel>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCreateReturnTrip}
+              >
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                Tạo chuyến về
+              </Button>
+              <Separator orientation="vertical" className="h-6 mx-2" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleTimeShift(1, 0)}
+              >
+                + 1 ngày
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleTimeShift(-1, 0)}
+              >
+                - 1 ngày
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleTimeShift(0, 1)}
+              >
+                + 1 giờ
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleTimeShift(0, -1)}
+              >
+                - 1 giờ
+              </Button>
+            </div>
+          </div>
+
           {isEditMode && (
             <FormField
               control={form.control}
@@ -333,7 +442,6 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
           <Button type="button" variant="outline" onClick={onCancel}>
             Hủy
           </Button>
-          {/* Cập nhật nút Submit để sử dụng `isDirty` */}
           <Button
             type="submit"
             disabled={

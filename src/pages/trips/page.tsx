@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
-import type { PaginationState } from "@tanstack/react-table";
+import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import tripAPI from "@/services/api/trip-api";
@@ -12,6 +12,11 @@ import type {
   TripStatus,
 } from "@/types/trip";
 
+import {
+  getFilteredRowModel,
+  getPaginationRowModel,
+} from "@tanstack/react-table";
+
 import { getColumns } from "@/components/trips/columns";
 import { TripForm } from "@/components/trips/trip-form";
 import { TripDetails } from "@/components/trips/trip-details";
@@ -19,6 +24,8 @@ import { TripDetails } from "@/components/trips/trip-details";
 import { DataTable } from "@/components/trips/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { DataTableToolbar } from "@/components/shared/data-table-toolbar";
+import { BatchDuplicateDialog } from "@/components/trips/BatchDuplicateTrips";
+import { AdvancedBatchDuplicateDialog } from "@/components/trips/AdvancedBatchDuplicateDialog";
 // Components UI cơ bản
 import {
   AlertDialog,
@@ -47,7 +54,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Copy } from "lucide-react";
 
 // Định nghĩa kiểu cho state lọc
 interface TripFilters {
@@ -60,6 +67,10 @@ export default function TripManagementPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [pageCount, setPageCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
 
   // --- State cho các hành động và UI ---
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
@@ -180,16 +191,39 @@ export default function TripManagementPage() {
     []
   );
 
+  // const table = useReactTable({
+  //   data: trips,
+  //   columns,
+  //   pageCount: pageCount,
+  //   state: { pagination: { pageIndex, pageSize } },
+  //   onPaginationChange: setPagination,
+  //   getCoreRowModel: getCoreRowModel(),
+  //   manualPagination: true,
+  //   manualFiltering: true,
+  // });
+
   const table = useReactTable({
     data: trips,
     columns,
     pageCount: pageCount,
-    state: { pagination: { pageIndex, pageSize } },
+    state: {
+      pagination: { pageIndex, pageSize },
+      rowSelection,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     manualFiltering: true,
   });
+
+  const selectedTripData = table
+    .getFilteredSelectedRowModel()
+    .rows.map((row) => row.original);
+  const numSelected = selectedTripData.length;
 
   return (
     <div className="container mx-auto pb-6">
@@ -237,6 +271,13 @@ export default function TripManagementPage() {
             </DropdownMenuContent>
           </DropdownMenu>
           {/* Nút thêm mới có thể đặt ở đây nếu muốn */}
+          <Button
+            variant="outline"
+            onClick={() => setIsDuplicateDialogOpen(true)}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Nhân bản theo ngày
+          </Button>
           <Button onClick={handleOpenCreateForm}>Tạo Chuyến đi</Button>
         </DataTableToolbar>
 
@@ -314,6 +355,27 @@ export default function TripManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* <BatchDuplicateDialog
+        isOpen={isDuplicateDialogOpen}
+        onClose={() => setIsDuplicateDialogOpen(false)}
+        onSuccess={fetchTrips}
+        sourceTrips={trips}
+      /> */}
+
+      {isDuplicateDialogOpen && (
+        <AdvancedBatchDuplicateDialog
+          isOpen={isDuplicateDialogOpen}
+          onClose={() => {
+            setIsDuplicateDialogOpen(false);
+            setRowSelection({}); // Bỏ chọn tất cả khi đóng
+          }}
+          onSuccess={() => {
+            fetchTrips();
+            setRowSelection({}); // Bỏ chọn tất cả khi thành công
+          }}
+          selectedTrips={selectedTripData}
+        />
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import type { Trip, TripStatus } from "@/types/trip";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Helper để format tiền tệ
 const formatCurrency = (amount: number) =>
@@ -48,6 +49,28 @@ export const getColumns = (
   onEdit: (trip: Trip) => void, // Callback để sửa
   onDelete: (trip: Trip) => void // Callback để xóa
 ): ColumnDef<Trip>[] => [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
   {
     accessorKey: "startLocation",
     header: "Tuyến đường",
