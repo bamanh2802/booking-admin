@@ -197,7 +197,7 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
 
     await toast.promise(promise, {
       loading: "Đang xử lý...",
-      success: (res) => {
+      success: () => {
         onSuccess();
         return isEditMode
           ? "Đã cập nhật chuyến đi thành công."

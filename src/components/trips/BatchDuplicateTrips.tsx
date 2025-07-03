@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
 import type { CreateNewTripProps } from "@/types/trip";
 import tripAPI from "@/services/api/trip-api"; // Giả sử bạn export type này từ file api
 import type { Trip } from "@/types/trip";

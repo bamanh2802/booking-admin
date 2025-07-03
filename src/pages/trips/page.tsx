@@ -24,7 +24,6 @@ import { TripDetails } from "@/components/trips/trip-details";
 import { DataTable } from "@/components/trips/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { DataTableToolbar } from "@/components/shared/data-table-toolbar";
-import { BatchDuplicateDialog } from "@/components/trips/BatchDuplicateTrips";
 import { AdvancedBatchDuplicateDialog } from "@/components/trips/AdvancedBatchDuplicateDialog";
 // Components UI cơ bản
 import {
@@ -223,7 +222,6 @@ export default function TripManagementPage() {
   const selectedTripData = table
     .getFilteredSelectedRowModel()
     .rows.map((row) => row.original);
-  const numSelected = selectedTripData.length;
 
   return (
     <div className="container mx-auto pb-6">
