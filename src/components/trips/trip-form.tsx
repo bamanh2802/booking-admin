@@ -7,6 +7,11 @@ import * as z from "zod";
 import { Loader2, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 
+// ✨ 1. IMPORT DAY.JS VÀ CÁC PLUGIN CẦN THIẾT
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -31,7 +36,10 @@ import type { CarCompany } from "@/types/car-company";
 import { DateTimePicker } from "@/components/shared/DateTimePicker";
 import { Separator } from "@/components/ui/separator";
 
-// 1. Zod Schema (Không thay đổi)
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Zod Schema (Không thay đổi)
 const tripFormSchema = z
   .object({
     startLocation: z.string().min(1, "Điểm đi không được để trống."),
@@ -59,7 +67,6 @@ interface TripFormProps {
   defaultDate?: Date;
 }
 
-// 3. Component chính (Đã được thiết kế lại)
 export function TripForm({
   initialData,
   onSuccess,
@@ -95,7 +102,6 @@ export function TripForm({
   const { isDirty } = form.formState;
 
   useEffect(() => {
-    // ... (logic fetch companies không đổi)
     const fetchCompanies = async () => {
       setIsFetchingCompanies(true);
       try {
@@ -112,7 +118,6 @@ export function TripForm({
   }, []);
 
   const handleCompanyChange = (companyId: string) => {
-    // ... (logic không đổi)
     const selectedCompany = companies.find((c) => c._id === companyId);
     if (selectedCompany) {
       form.setValue("carCompanyId", companyId, { shouldDirty: true });
@@ -123,13 +128,6 @@ export function TripForm({
     }
   };
 
-  // =================================================================
-  // === ✨ CÁC HÀM XỬ LÝ CHO THAO TÁC NHANH ✨ ===
-  // =================================================================
-
-  /**
-   * Hoán đổi điểm đi/đến và bến đi/đến để tạo chuyến về
-   */
   const handleCreateReturnTrip = () => {
     const { startLocation, endLocation, startStation, endStation } =
       form.getValues();
@@ -140,11 +138,6 @@ export function TripForm({
     toast.info("Đã hoán đổi điểm đi và điểm đến.");
   };
 
-  /**
-   * Thay đổi thời gian khởi hành và thời gian đến một khoảng nhất định
-   * @param days - Số ngày để cộng/trừ
-   * @param hours - Số giờ để cộng/trừ
-   */
   const handleTimeShift = (days: number, hours: number) => {
     const currentStartTime = form.getValues("startTime");
     const currentEndTime = form.getValues("endTime");
@@ -179,16 +172,25 @@ export function TripForm({
   };
 
   const onSubmit = async (data: TripFormValues) => {
-    // ... (logic submit không đổi)
     if (isEditMode && !isDirty) {
       toast.info("Không có thay đổi để lưu.");
       return;
     }
 
+    // ✨ 3. SỬ DỤNG DAY.JS ĐỂ CHUYỂN ĐỔI MÚI GIỜ
+    const timeZone = "Asia/Ho_Chi_Minh";
+
+    // dayjs(date) -> Tạo đối tượng day.js từ Date object của người dùng.
+    // .tz(timeZone, true) -> Giữ nguyên giờ:phút hiện tại, nhưng "gắn nhãn" cho nó là ở múi giờ "Asia/Ho_Chi_Minh".
+    // .toISOString() -> Chuyển đổi thành chuỗi ISO string ở múi giờ UTC tương đương.
+    const startTimeISO = dayjs(data.startTime).tz(timeZone, true).toISOString();
+    const endTimeISO = dayjs(data.endTime).tz(timeZone, true).toISOString();
+
     const payload: any = {
       ...data,
-      startTime: data.startTime.toISOString(),
-      endTime: data.endTime.toISOString(),
+      // Sử dụng các chuỗi ISO đã được chuyển đổi chính xác
+      startTime: startTimeISO,
+      endTime: endTimeISO,
       price: data.price.toString(),
     };
 
@@ -218,13 +220,13 @@ export function TripForm({
   const isLoading = form.formState.isSubmitting;
 
   return (
+    // Phần JSX của form không có gì thay đổi
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-6 p-4 md:p-6"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* === ✨ KHU VỰC THAO TÁC NHANH ✨ === */}
           <div className="md:col-span-2 space-y-3 p-4 bg-muted/50 rounded-lg border">
             <FormLabel className="text-base font-semibold">
               Thao tác nhanh
@@ -274,7 +276,6 @@ export function TripForm({
               </Button>
             </div>
           </div>
-
           {isEditMode && (
             <FormField
               control={form.control}
@@ -302,7 +303,6 @@ export function TripForm({
               )}
             />
           )}
-
           <FormField
             control={form.control}
             name="startLocation"
