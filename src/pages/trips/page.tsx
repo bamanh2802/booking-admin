@@ -105,7 +105,7 @@ export default function TripManagementPage() {
     try {
       const params = {
         page: pageIndex + 1,
-        limit: 10,
+        limit: pageSize,
         day: format(selectedDate, "yyyy-MM-dd"),
       };
       const response = await tripAPI.getAllTrip(params);
@@ -316,7 +316,7 @@ export default function TripManagementPage() {
               initialData={editingTrip}
               onSuccess={handleFormSuccess}
               onCancel={handleCloseForm}
-              defaultDate={selectedDate} // ✨ TRUYỀN NGÀY ĐANG CHỌN
+              defaultDate={selectedDate}
             />
           </div>
         </SheetContent>

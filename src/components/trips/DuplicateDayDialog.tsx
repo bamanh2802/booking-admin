@@ -51,7 +51,7 @@ export function DuplicateDayDialog({
     try {
       const params = {
         page: 1,
-        limit: 999,
+        limit: 99,
         day: format(sourceDate, "yyyy-MM-dd"),
       };
       const response = await tripAPI.getAllTrip(params);

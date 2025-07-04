@@ -17,7 +17,6 @@ class TripAPI extends BaseAPI {
   }
 
   async createTrip(data: CreateNewTripProps): Promise<{ data: Trip }> {
-    console.log("Creating trip with data:", data);
     return this.post("/", data);
   }
 
