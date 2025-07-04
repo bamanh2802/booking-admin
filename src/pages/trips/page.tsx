@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { toast } from "sonner";
+import { DuplicateDayDialog } from "@/components/trips/DuplicateDayDialog";
 
 import tripAPI from "@/services/api/trip-api";
 import type {
@@ -16,6 +17,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
 } from "@tanstack/react-table";
+import { vi } from "date-fns/locale";
 
 import { getColumns } from "@/components/trips/columns";
 import { TripForm } from "@/components/trips/trip-form";
@@ -43,19 +45,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// import { Input } from "@/components/ui/input";
+// import {
+//   DropdownMenu,
+//   DropdownMenuCheckboxItem,
+//   DropdownMenuContent,
+//   DropdownMenuLabel,
+//   DropdownMenuSeparator,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy } from "lucide-react";
+import { Loader2, Copy, CalendarIcon, CopyPlus } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
-// Định nghĩa kiểu cho state lọc
 interface TripFilters {
   query: string; // Cho tìm kiếm chung theo tuyến đường
   status: TripStatus[];
@@ -67,9 +75,11 @@ export default function TripManagementPage() {
   const [pageCount, setPageCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDuplicateDayOpen, setIsDuplicateDayOpen] = useState(false);
+  const [isAdvancedDuplicateOpen, setIsAdvancedDuplicateOpen] = useState(false);
 
-  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   // --- State cho các hành động và UI ---
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
@@ -81,7 +91,7 @@ export default function TripManagementPage() {
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
 
   // --- State cho Server-Side Pagination và Filtering ---
-  const [filters, setFilters] = useState<TripFilters>({
+  const [filters, _] = useState<TripFilters>({
     query: "",
     status: [],
   });
@@ -96,6 +106,7 @@ export default function TripManagementPage() {
     try {
       const params = {
         page: pageIndex + 1,
+        day: format(selectedDate, "yyyy-MM-dd"),
       };
       const response = await tripAPI.getAllTrip(params);
       if (response.success) {
@@ -128,7 +139,7 @@ export default function TripManagementPage() {
   // useEffect riêng cho pagination để phản hồi ngay lập tức
   useEffect(() => {
     fetchTrips();
-  }, [pageIndex, pageSize]);
+  }, [pageIndex, pageSize, selectedDate]);
 
   // --- Handlers cho các hành động của người dùng ---
   const handleOpenCreateForm = () => {
@@ -222,61 +233,59 @@ export default function TripManagementPage() {
   const selectedTripData = table
     .getFilteredSelectedRowModel()
     .rows.map((row) => row.original);
+  const numSelected = selectedTripData.length;
 
   return (
     <div className="container mx-auto pb-6">
       <div className="space-y-4">
         <DataTableToolbar>
-          <Input
-            placeholder="Tìm theo điểm đi/đến..."
-            value={filters.query}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, query: e.target.value }))
-            }
-            className="h-10 w-[250px]"
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Trạng thái ({filters.status.length || "Tất cả"})
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Lọc theo trạng thái</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {(["Not Started", "Completed", "Delayed"] as TripStatus[]).map(
-                (status) => (
-                  <DropdownMenuCheckboxItem
-                    key={status}
-                    checked={filters.status.includes(status)}
-                    onCheckedChange={(checked) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        status: checked
-                          ? [...prev.status, status]
-                          : prev.status.filter((s) => s !== status),
-                      }))
-                    }
-                  >
-                    {status === "Not Started"
-                      ? "Chưa bắt đầu"
-                      : status === "Completed"
-                      ? "Đã hoàn thành"
-                      : "Bị hoãn"}
-                  </DropdownMenuCheckboxItem>
-                )
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {/* Nút thêm mới có thể đặt ở đây nếu muốn */}
-          <Button
-            variant="outline"
-            onClick={() => setIsDuplicateDialogOpen(true)}
-          >
-            <Copy className="mr-2 h-4 w-4" />
-            Nhân bản theo ngày
-          </Button>
-          <Button onClick={handleOpenCreateForm}>Tạo Chuyến đi</Button>
+          <div className="flex items-center space-x-2 flex-wrap gap-2">
+            {/* Bộ lọc ngày trung tâm */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className="w-[280px] justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, "PPP", { locale: vi })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* Các filter khác nếu có */}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {/* Nút nhân bản cả ngày */}
+            <Button
+              variant="outline"
+              onClick={() => setIsDuplicateDayOpen(true)}
+              disabled={trips.length === 0}
+            >
+              <CopyPlus className="mr-2 h-4 w-4" />
+              Nhân bản cả ngày
+            </Button>
+            {/* Nút nhân bản các chuyến đã chọn */}
+            <Button
+              variant="outline"
+              onClick={() => setIsAdvancedDuplicateOpen(true)}
+              disabled={numSelected === 0}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Nhân bản ({numSelected})
+            </Button>
+            {/* Nút tạo mới */}
+            <Button onClick={handleOpenCreateForm}>Tạo Chuyến đi</Button>
+          </div>
         </DataTableToolbar>
 
         <DataTable table={table} columns={columns} isLoading={isLoading} />
@@ -298,10 +307,16 @@ export default function TripManagementPage() {
             </SheetDescription>
           </SheetHeader>
           <div className="py-4">
+            {/* <TripForm
+              initialData={editingTrip}
+              onSuccess={handleFormSuccess}
+              onCancel={handleCloseForm}
+            /> */}
             <TripForm
               initialData={editingTrip}
               onSuccess={handleFormSuccess}
               onCancel={handleCloseForm}
+              defaultDate={selectedDate} // ✨ TRUYỀN NGÀY ĐANG CHỌN
             />
           </div>
         </SheetContent>
@@ -360,18 +375,28 @@ export default function TripManagementPage() {
         sourceTrips={trips}
       /> */}
 
-      {isDuplicateDialogOpen && (
+      {isAdvancedDuplicateOpen && (
         <AdvancedBatchDuplicateDialog
-          isOpen={isDuplicateDialogOpen}
+          isOpen={isAdvancedDuplicateOpen}
           onClose={() => {
-            setIsDuplicateDialogOpen(false);
-            setRowSelection({}); // Bỏ chọn tất cả khi đóng
+            setIsAdvancedDuplicateOpen(false);
+            setRowSelection({});
           }}
           onSuccess={() => {
             fetchTrips();
-            setRowSelection({}); // Bỏ chọn tất cả khi thành công
+            setRowSelection({});
           }}
           selectedTrips={selectedTripData}
+        />
+      )}
+
+      {/* Dialog nhân bản cả ngày */}
+      {isDuplicateDayOpen && (
+        <DuplicateDayDialog
+          isOpen={isDuplicateDayOpen}
+          onClose={() => setIsDuplicateDayOpen(false)}
+          onSuccess={fetchTrips}
+          sourceDate={selectedDate}
         />
       )}
     </div>

@@ -52,15 +52,20 @@ const tripFormSchema = z
 
 type TripFormValues = z.infer<typeof tripFormSchema>;
 
-// 2. Component Props (Không thay đổi)
 interface TripFormProps {
   initialData: Trip | null;
   onSuccess: () => void;
   onCancel: () => void;
+  defaultDate?: Date;
 }
 
 // 3. Component chính (Đã được thiết kế lại)
-export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
+export function TripForm({
+  initialData,
+  onSuccess,
+  onCancel,
+  defaultDate,
+}: TripFormProps) {
   const [companies, setCompanies] = useState<CarCompany[]>([]);
   const [isFetchingCompanies, setIsFetchingCompanies] = useState(true);
 
@@ -83,6 +88,8 @@ export function TripForm({ initialData, onSuccess, onCancel }: TripFormProps) {
           price: 0,
           type: "Regular",
           status: "Not Started",
+          startTime: defaultDate ? new Date(defaultDate) : undefined,
+          endTime: defaultDate ? new Date(defaultDate) : undefined,
         },
   });
   const { isDirty } = form.formState;
