@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
+  type PaginationState,
 } from "@tanstack/react-table";
 
-import { DataTable } from "@/components/trips/data-table";
+import { DataTable } from "@/components/trips/data-table"; // Giả sử path này đúng
 import { createColumns } from "@/components/quickaction/columns";
 import type { QuickAction } from "@/types/quickaction";
 import { quickActionAPI } from "@/services/api/quickaction-api";
@@ -17,17 +17,23 @@ export default function QuickActionsPage() {
   const [data, setData] = useState<QuickAction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
+
   const [pageCount, setPageCount] = useState(0);
 
-  // Hàm fetch dữ liệu
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await quickActionAPI.getAllQuickActions();
+      const params = {
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+      };
+
+      const response = await quickActionAPI.getAllQuickActions(params);
+
       setData(response.data.results);
       setPageCount(response.data.totalPages);
     } catch (error) {
@@ -35,23 +41,21 @@ export default function QuickActionsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [pagination.pageIndex, pagination.pageSize]);
 
-  // Gọi API khi component mount
   useEffect(() => {
     fetchData();
-  }, [pagination]);
+  }, [fetchData]);
 
   const columns = useMemo(
     () => createColumns({ onActionComplete: fetchData }),
-    []
+    [fetchData]
   );
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     pageCount,
     state: {
@@ -66,6 +70,7 @@ export default function QuickActionsPage() {
       <p className="text-muted-foreground mb-6">
         Danh sách các yêu cầu nhanh từ người dùng cần được xử lý.
       </p>
+
       <DataTable table={table} columns={columns} isLoading={isLoading} />
       <DataTablePagination table={table} />
     </div>

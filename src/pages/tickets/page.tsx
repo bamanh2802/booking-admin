@@ -77,6 +77,7 @@ export default function TicketManagementPage() {
     try {
       const params = {
         page: pageIndex + 1,
+        limit: 10,
       };
       const response = await ticketAPI.getAllTickets(params);
       if (response.success) {

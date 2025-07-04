@@ -100,12 +100,12 @@ export default function TripManagementPage() {
     pageSize: 10,
   });
 
-  // Hàm gọi API chính, được tối ưu hóa
   const fetchTrips = async () => {
     setIsLoading(true);
     try {
       const params = {
         page: pageIndex + 1,
+        limit: 10,
         day: format(selectedDate, "yyyy-MM-dd"),
       };
       const response = await tripAPI.getAllTrip(params);
