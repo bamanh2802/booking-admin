@@ -142,7 +142,8 @@ export default function TicketManagementPage() {
 
   function confirmCancel() {
     if (!cancellingTicket) return;
-    const promise = () => ticketAPI.cancelTicket(cancellingTicket._id);
+    const promise = () =>
+      ticketAPI.cancelTicket(cancellingTicket._id, cancellingTicket.seats);
     toast.promise(promise, {
       loading: "Đang hủy vé...",
       success: () => {

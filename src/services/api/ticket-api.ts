@@ -1,4 +1,5 @@
 // src/api/ticket.ts
+import type { Seat } from "@/types/trip";
 import { BaseAPI } from "./base-api";
 import type { TicketListResponse, Ticket,  } from "@/types/ticket";
 
@@ -18,8 +19,8 @@ class TicketAPI extends BaseAPI {
   }
 
   // Hàm hủy vé (thường là một action riêng)
-  async cancelTicket(id:string): Promise<{ data: Ticket }> {
-    return this.post(`/${id}/cancel`, {}); // Giả sử dùng POST đến endpoint /:id/cancel
+  async cancelTicket(id:string, seats: Seat[]): Promise<{ data: Ticket }> {
+    return this.patch(`/${id}`, {titleRequest: "Cancel Ticket", seats}); 
   }
 
 }
