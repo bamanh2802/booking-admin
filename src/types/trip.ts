@@ -10,6 +10,7 @@ export interface Seat {
   floor: number;
 }
 
+
 // Định nghĩa thông tin về nhà xe
 export interface CarCompanyInfo extends BaseEntity {
   name: string;

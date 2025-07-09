@@ -33,7 +33,59 @@ interface CarCompanyInfo {
   updatedAt: string;
 }
 
-// CẬP NHẬT: Interface TicketRequest chính để khớp hoàn toàn với dữ liệu API
+interface CreatorInfo {
+  _id: string;
+  fullName: string;
+  email: string;
+}
+
+interface CreatorRole {
+    roleName: string;
+}
+
+// Interface cơ sở
+interface BaseRequest {
+  _id: string;
+  userId: string;
+  status: RequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  creatorInfo: CreatorInfo | null;
+  creatorRole?: CreatorRole;
+  createdBy: string | null;
+}
+
+
+// Định nghĩa các loại yêu cầu cụ thể
+export interface BookTicketRequest extends BaseRequest {
+  titleRequest: "Book Ticket";
+  tripId: string;
+  price: number;
+  passengerName: string;
+  passengerPhone: string;
+  seats: { code: string; floor: number }[];
+  tripInfo?: Partial<TripInfo>;
+  carCompanyInfo?: Partial<CarCompanyInfo>;
+}
+
+export interface CancelTicketRequest extends BaseRequest {
+  titleRequest: "Cancel Ticket";
+  ticketId: string;
+  tripId: string;
+  price: number;
+  passengerName: string;
+  passengerPhone: string;
+  seats: { code: string; floor: number }[];
+}
+
+export interface RefundTicketRequest extends BaseRequest {
+  titleRequest: "Refund Ticket";
+  ticketId: string | null;
+  amount: number;
+  reason: string;
+}
+
+
 export interface TicketRequest extends BaseEntity { // `extends BaseEntity` nếu bạn có
   // Bỏ đi các trường `extends BaseEntity` nếu bạn không dùng
   // _id: string;
@@ -50,9 +102,9 @@ export interface TicketRequest extends BaseEntity { // `extends BaseEntity` nế
   seats: Seat[];
   type: 'Regular' | 'VIP';
   status: RequestStatus;
-  
+  creatorInfo: CreatorInfo;
   // Các trường có thể có hoặc không tùy loại request
-  amount?: number; // `amount` chỉ có ở "Refund Ticket", nên là optional
+  amount: number; // `amount` chỉ có ở "Refund Ticket", nên là optional
   reason?: string; // `reason` có thể không có ở "Book Ticket", nên là optional
 
   // Các trường luôn có nhưng có thể null

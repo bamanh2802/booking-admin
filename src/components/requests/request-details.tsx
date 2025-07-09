@@ -1,96 +1,154 @@
+// src/components/requests/request-details.tsx
+
 "use client";
 
-import type { TicketRequest, RequestTitle } from "@/types/request";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { User, Ticket, MapPin, Bus, Banknote, Calendar, Info } from "lucide-react";
 
-const DetailRow = ({
-  label,
-  value,
-  hidden = false,
-}: {
-  label: string;
-  value: React.ReactNode;
-  hidden?: boolean;
-}) => {
-  if (hidden) return null;
+// Giả sử bạn có một API service để lấy user
+import userAPI from "@/services/api/user-api"; 
+
+// Import đúng các kiểu Discriminated Union
+import type { 
+  TicketRequest,
+  BookTicketRequest,
+  CancelTicketRequest,
+  RefundTicketRequest,
+} from "@/types/request";
+import type { User as UserInfo} from "@/types/user"; 
+
+
+// --- Component con cho từng loại yêu cầu ---
+
+// Helper component
+const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: React.ReactNode }) => {
+  if (!value) return null;
   return (
-    <div className="flex flex-col gap-1 py-2">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <div className="text-sm font-medium">{value}</div>
+    <div className="flex items-start gap-3 py-2">
+      <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
+      <div className="flex flex-col w-full">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <div className="text-sm font-semibold">{value}</div>
+      </div>
     </div>
   );
 };
 
-// CẬP NHẬT: Dùng lại map từ file columns.tsx để nhất quán
-const TITLE_STYLES: {
-  [key in RequestTitle]: {
-    label: string;
-    variant: "default" | "outline" | "destructive";
-  };
-} = {
-  "Book Ticket": { label: "Yêu cầu Đặt vé", variant: "default" },
-  "Cancel Ticket": { label: "Yêu cầu Hủy vé", variant: "outline" },
-  "Refund Ticket": { label: "Yêu cầu Hoàn tiền", variant: "destructive" },
-};
+// Component cho Yêu cầu Đặt vé
+const BookTicketDetails = ({ request }: { request: BookTicketRequest }) => (
+  <>
+    <h3 className="font-semibold text-base mb-2">Chi tiết Đặt vé</h3>
+    <div className="space-y-1">
+      <DetailRow icon={User} label="Hành khách" value={`${request.passengerName} - ${request.passengerPhone}`} />
+      <DetailRow icon={Ticket} label="Ghế" value={<Badge variant="secondary">{request.seats.map(s => s.code).join(', ')}</Badge>} />
+      <DetailRow icon={MapPin} label="Hành trình" value={request.tripInfo?.location} />
+      <DetailRow icon={Bus} label="Nhà xe" value={request.carCompanyInfo?.name} />
+      <DetailRow icon={Calendar} label="Khởi hành" value={request.tripInfo?.startTime ? new Date(request.tripInfo.startTime).toLocaleString('vi-VN') : 'N/A'} />
+      <DetailRow icon={Banknote} label="Giá vé" value={<span className="font-bold text-primary">{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(request.price)}</span>} />
+    </div>
+  </>
+);
 
+// Component cho Yêu cầu Hủy vé
+const CancelTicketDetails = ({ request }: { request: CancelTicketRequest }) => (
+  <>
+    <h3 className="font-semibold text-base mb-2">Chi tiết Hủy vé</h3>
+    <div className="space-y-1">
+      <DetailRow icon={Ticket} label="Mã vé cần hủy" value={<Badge variant="destructive">{request.ticketId}</Badge>} />
+      <DetailRow icon={User} label="Hành khách" value={`${request.passengerName} - ${request.passengerPhone}`} />
+      <DetailRow icon={Banknote} label="Giá vé gốc" value={new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(request.price)} />
+    </div>
+  </>
+);
+
+// Component cho Yêu cầu Hoàn tiền
+const RefundTicketDetails = ({ request }: { request: RefundTicketRequest }) => (
+  <>
+    <h3 className="font-semibold text-base mb-2">Chi tiết Hoàn tiền</h3>
+    <div className="space-y-1">
+      <DetailRow 
+        icon={Banknote} 
+        label="Số tiền yêu cầu" 
+        value={<span className="font-bold text-primary">{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(request.amount)}</span>}
+      />
+      {request.ticketId && <DetailRow icon={Ticket} label="Mã vé liên quan" value={<Badge variant="outline">{request.ticketId}</Badge>} />}
+      <DetailRow icon={Info} label="Lý do" value={<p className="text-sm italic bg-muted p-3 rounded-md">{request.reason}</p>} />
+    </div>
+  </>
+);
+
+// --- Component chính để điều phối ---
 export function RequestDetails({ request }: { request: TicketRequest | null }) {
-  if (!request) return null;
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(false);
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount);
-  const formatDateTime = (dateString: string) =>
-    new Date(dateString).toLocaleString("vi-VN");
-  const titleStyle = TITLE_STYLES[request.titleRequest];
+  useEffect(() => {
+    // Tự động fetch thông tin người dùng khi có request mới
+    if (request?.userId) {
+      setIsUserLoading(true);
+      userAPI.getUserById(request.userId)
+        .then(response => {
+          if (response.success) {
+            setUserInfo(response.data);
+          }
+        })
+        .catch(() => setUserInfo(null)) // Xử lý lỗi
+        .finally(() => setIsUserLoading(false));
+    } else {
+        setUserInfo(null); // Reset user info nếu không có userId
+    }
+  }, [request]);
+
+  if (!request) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        <p>Chọn một yêu cầu để xem chi tiết</p>
+      </div>
+    );
+  }
+
+  const renderRequestSpecificDetails = () => {
+    switch (request.titleRequest) {
+      case "Book Ticket":
+        return <BookTicketDetails request={request as BookTicketRequest} />;
+      case "Cancel Ticket":
+        return <CancelTicketDetails request={request as CancelTicketRequest} />;
+      case "Refund Ticket":
+        return <RefundTicketDetails request={request as RefundTicketRequest} />;
+      default:
+        return <Alert variant="destructive"><AlertTitle>Lỗi</AlertTitle><AlertDescription>Loại yêu cầu không xác định.</AlertDescription></Alert>;
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <DetailRow
-        label="Loại yêu cầu"
-        value={<Badge variant={titleStyle.variant}>{titleStyle.label}</Badge>}
-      />
-      <DetailRow
-        label="Hành khách"
-        value={`${request.passengerName} - ${request.passengerPhone}`}
-      />
-      <Separator />
-      <DetailRow label="Chuyến đi" value={request.tripInfo.location} />
-      <DetailRow label="Nhà xe" value={request.carCompanyInfo.name} />
-      <DetailRow
-        label="Thời gian đi"
-        value={formatDateTime(request.tripInfo.startTime)}
-      />
-      <DetailRow
-        label="Ghế yêu cầu xử lý"
-        value={
-          <Badge variant="secondary">
-            {request.seats.map((s) => s.code).join(", ")}
-          </Badge>
-        }
-      />
-      <Separator />
-      <DetailRow label="Giá vé gốc" value={formatCurrency(request.price)} />
+    <div className="space-y-6">
+      {/* Phần render chi tiết theo từng loại */}
+      {renderRequestSpecificDetails()}
 
-      {/* CẬP NHẬT: Chỉ hiển thị các trường này nếu chúng tồn tại */}
-      <DetailRow
-        label="Số tiền yêu cầu hoàn"
-        value={
-          <span className="font-bold text-primary">
-            {formatCurrency(request.amount!)}
-          </span>
-        }
-        hidden={typeof request.amount !== "number"}
-      />
-      <DetailRow
-        label="Lý do của khách hàng"
-        value={
-          <p className="italic bg-muted p-3 rounded-md">{request.reason}</p>
-        }
-        hidden={!request.reason}
-      />
+      <Separator />
+
+      {/* Phần thông tin chung, bao gồm cả User Info được fetch */}
+      <h3 className="font-semibold text-base">Thông tin Người dùng & Hệ thống</h3>
+      <div className="space-y-1">
+        {isUserLoading ? (
+            <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+            </div>
+        ) : userInfo ? (
+            <>
+                <DetailRow icon={User} label="Tên người dùng" value={userInfo.fullName} />
+                <DetailRow icon={User} label="Email" value={userInfo.email} />
+            </>
+        ) : (
+            <DetailRow icon={User} label="Người dùng" value="Không có thông tin." />
+        )}
+         <DetailRow icon={Info} label="Người tạo yêu cầu" value={request.creatorInfo?.fullName || "Khách hàng"} />
+      </div>
     </div>
   );
 }

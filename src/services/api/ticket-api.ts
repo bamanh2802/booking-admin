@@ -14,6 +14,7 @@ class TicketAPI extends BaseAPI {
     return this.get("/", params);
   }
 
+
   async updateTicket(id: string, payload: any): Promise<{ data: Ticket }> {
     return this.patch(`/${id}`, payload); 
   }

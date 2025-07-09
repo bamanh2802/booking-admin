@@ -16,7 +16,7 @@ import type { QuickAction } from "@/types/quickaction";
 
 interface DataTableRowActionsProps {
   row: Row<QuickAction>;
-  onActionComplete: () => void; // Callback để trigger việc fetch lại dữ liệu
+  onActionComplete: () => void; 
 }
 
 export function DataTableRowActions({
@@ -29,7 +29,7 @@ export function DataTableRowActions({
     try {
       await quickActionAPI.markQuickActionAsDone(action._id);
       toast.success("Đã đánh dấu yêu cầu là hoàn thành.");
-      onActionComplete(); // Gọi callback để load lại data
+      onActionComplete(); 
     } catch (error) {
       toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     }

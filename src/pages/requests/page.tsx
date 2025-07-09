@@ -148,30 +148,100 @@ export default function RequestManagementPage() {
     setViewingRequest(req);
     setIsDetailsSheetOpen(true);
   }
+  
   function handleApprove(req: TicketRequest) {
     setProcessingRequest({ req, type: "approve" });
   }
+  
   function handleReject(req: TicketRequest) {
     setProcessingRequest({ req, type: "reject" });
   }
 
-  function confirmProcessing() {
+  // Helper function to get approve parameters based on request type
+  const getApproveParams = (req: TicketRequest) => {
+    const baseParams = {
+      titleRequest: req.titleRequest,
+    };
+
+    switch (req.titleRequest) {
+      case "Book Ticket":
+        return {
+          ...baseParams,
+          status: "Confirmed",
+          seats: 'seats' in req ? req.seats : undefined,
+        };
+      
+      case "Refund Ticket":
+        return {
+          ...baseParams,
+          status: "Refunded",
+        };
+      
+      case "Cancel Ticket":
+        return {
+          ...baseParams,
+          status: "Confirmed",
+          seats: 'seats' in req ? req.seats : undefined,
+        };
+      
+      default:
+        return {
+          ...baseParams,
+          status: "Confirmed",
+        };
+    }
+  };
+
+  async function confirmProcessing() {
     if (!processingRequest) return;
+    
     const { req, type } = processingRequest;
-    const promise = () =>
-      type === "approve"
-        ? requestAPI.approveRequest(req._id)
-        : requestAPI.rejectRequest(req._id);
-    toast.promise(promise, {
-      loading: "Đang xử lý...",
-      success: () => {
-        setProcessingRequest(null);
-        fetchRequests();
-        return `Đã ${type === "approve" ? "chấp thuận" : "từ chối"} yêu cầu.`;
-      },
-      error: (err: any) => `Xử lý thất bại: ${err.message}`,
-    });
+    
+    try {
+      if (type === "approve") {
+        const params = getApproveParams(req);
+        await requestAPI.approveRequest(
+          req._id,
+          params.titleRequest,
+          params.status,
+          req.seats
+        );
+      } else {
+        await requestAPI.rejectRequest(req._id);
+      }
+      
+      toast.success(
+        `Đã ${type === "approve" ? "chấp thuận" : "từ chối"} yêu cầu thành công.`
+      );
+      
+      setProcessingRequest(null);
+      fetchRequests();
+      
+    } catch (error) {
+      const err = error as Error;
+      toast.error(
+        `Xử lý thất bại: ${err.message || "Đã xảy ra lỗi không xác định"}`
+      );
+    }
   }
+
+  // Helper function to get request type display name
+  const getRequestTypeDisplayName = (titleRequest: RequestTitle) => {
+    const displayNames = {
+      "Book Ticket": "đặt vé",
+      "Cancel Ticket": "hủy vé", 
+      "Refund Ticket": "hoàn tiền"
+    };
+    return displayNames[titleRequest] || titleRequest;
+  };
+
+  // Helper function to get passenger name from request
+  const getPassengerName = (req: any) => {
+    if ('passengerName' in req) {
+      return req.passengerName;
+    }
+    return req.creatorInfo?.fullName || "Khách hàng";
+  };
 
   return (
     <div className="container mx-auto pb-6">
@@ -263,9 +333,19 @@ export default function RequestManagementPage() {
             <AlertDialogDescription>
               Bạn có chắc chắn muốn{" "}
               {processingRequest?.type === "approve" ? "chấp thuận" : "từ chối"}{" "}
-              yêu cầu của{" "}
-              <strong>{processingRequest?.req.passengerName}</strong>? Hành động
-              này không thể hoàn tác.
+              yêu cầu{" "}
+              {processingRequest?.req.titleRequest 
+                ? getRequestTypeDisplayName(processingRequest.req.titleRequest)
+                : ""
+              }{" "}
+              của{" "}
+              <strong>
+                {processingRequest?.req 
+                  ? getPassengerName(processingRequest.req)
+                  : "Khách hàng"
+                }
+              </strong>
+              ? Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

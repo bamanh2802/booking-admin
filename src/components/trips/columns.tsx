@@ -3,6 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Ticket } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,9 +46,10 @@ const StatusBadge = ({ status }: { status: TripStatus }) => {
 
 // Hàm định nghĩa các cột cho bảng
 export const getColumns = (
-  onViewDetails: (trip: Trip) => void, // Callback để xem chi tiết
-  onEdit: (trip: Trip) => void, // Callback để sửa
-  onDelete: (trip: Trip) => void // Callback để xóa
+  onViewDetails: (trip: Trip) => void, 
+  onEdit: (trip: Trip) => void,
+  onDelete: (trip: Trip) => void,
+  onOpenCreateTicketSheet?: (trip: Trip) => void 
 ): ColumnDef<Trip>[] => [
   {
     id: "select",
@@ -122,8 +124,10 @@ export const getColumns = (
   },
   {
     id: "actions",
-    cell: ({ row }) => (
-      <div className="text-right">
+    cell: ({ row }) => {
+      const trip = row.original;
+      return (
+        <div className="text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -132,6 +136,12 @@ export const getColumns = (
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+             {onOpenCreateTicketSheet && (
+                <DropdownMenuItem onClick={() => onOpenCreateTicketSheet(trip)}>
+                  <Ticket className="mr-2 h-4 w-4" />
+                  <span>Tạo vé</span>
+                </DropdownMenuItem>
+              )}
             <DropdownMenuItem onClick={() => onViewDetails(row.original)}>
               <Eye className="mr-2 h-4 w-4" />
               Xem chi tiết
@@ -151,6 +161,7 @@ export const getColumns = (
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    ),
+      )
+    }
   },
 ];

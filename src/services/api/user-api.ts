@@ -19,7 +19,6 @@ class UserAPI extends BaseAPI {
     super("/admin/users");
   }
 
-  // Authentication endpoints
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     return this.post("/login", credentials);
   }

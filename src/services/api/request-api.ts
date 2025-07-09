@@ -1,3 +1,4 @@
+import type { Seat } from "@/types/trip";
 import { BaseAPI } from "./base-api";
 
 
@@ -8,13 +9,42 @@ class RequestAPI extends BaseAPI {
     super("/ticket-requests");
   }
 
+  async createNewRequest(
+    userId: string,
+    tripId: string,
+    status: string,
+    titleRequest: string,
+    seats: Seat[],
+    passengerName: string,
+    passengerPhone: string,
+    type: string,
+    price: string,
+  ) {
+    
+    return this.post("/", {
+      userId,
+      tripId,
+      status,
+      titleRequest,
+      seats,
+      passengerName,
+      passengerPhone,
+      type,
+      price,
+    })
+  }
+
+  
+
   async getAllRequests(params: any): Promise<RequestListResponse> {
     return this.get("/", params)
   }
 
-   async approveRequest(id: string): Promise<void> {
+   async approveRequest(id: string, titleRequest: string, status?: string, seats?: Seat[]): Promise<void> {
       return this.patch(`/${id}`, {
-        titleRequest: "Book Ticket"
+        titleRequest,
+        status,
+        seats
       }); 
     }
   

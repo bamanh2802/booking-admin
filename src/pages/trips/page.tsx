@@ -6,17 +6,14 @@ import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { DuplicateDayDialog } from "@/components/trips/DuplicateDayDialog";
 
-// API Services
 import tripAPI from "@/services/api/trip-api";
 
-// Types
 import type {
   Trip,
   TripDetails as TripDetailsType,
   TripStatus,
 } from "@/types/trip";
 
-// Tanstack Table Utilities
 import {
   getFilteredRowModel,
   getPaginationRowModel,
@@ -34,6 +31,7 @@ import { DataTable } from "@/components/trips/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { DataTableToolbar } from "@/components/shared/data-table-toolbar";
 import { AdvancedBatchDuplicateDialog } from "@/components/trips/AdvancedBatchDuplicateDialog";
+import { CreateTicketSheet } from "@/components/trips/CreateTicketSheet";
 
 // UI Components (shadcn/ui)
 import {
@@ -68,6 +66,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
+import { useAuthStore } from "@/stores";
 // Icons (lucide-react)
 import {
   Loader2,
@@ -78,6 +77,7 @@ import {
   ArrowDown,
   Trash2,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 // --- Dữ liệu tĩnh cho các địa điểm ---
 interface Location {
@@ -121,6 +121,17 @@ export default function TripManagementPage() {
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const userIdFromUrl = searchParams.get("userId");
+
+   const [creatingTicketForTrip, setCreatingTicketForTrip] = useState<Trip | null>(null);
+  const [isCreateTicketSheetOpen, setIsCreateTicketSheetOpen] = useState(false);
+
+  const { user } = useAuthStore();
+
+  const [ticketCreationUserId, setTicketCreationUserId] = useState<string | null>(null);
+
 
   // --- State cho Server-Side Filtering, Sorting và Pagination ---
   const [filters, setFilters] = useState<TripFilters>({
@@ -169,7 +180,28 @@ export default function TripManagementPage() {
     }
   };
 
-  // --- useEffect để gọi lại API khi bộ lọc, sắp xếp, hoặc ngày thay đổi ---
+    const handleOpenCreateTicketSheet = (trip: Trip) => {
+    const targetUserId = userIdFromUrl || user?._id;
+
+    if (!targetUserId) {
+      toast.error("Không xác định được người dùng.", {
+        description: "Không thể tạo vé nếu không có người dùng mục tiêu.",
+      });
+      return;
+    }
+    
+    setCreatingTicketForTrip(trip);
+    setTicketCreationUserId(targetUserId); // Lưu lại userId sẽ dùng
+    setIsCreateTicketSheetOpen(true);
+  };
+
+  const handleTicketCreationSuccess = () => {
+    setIsCreateTicketSheetOpen(false);
+    setCreatingTicketForTrip(null);
+    setTicketCreationUserId(null);
+    toast.success("Yêu cầu tạo vé đã được gửi thành công!");
+  };
+
   useEffect(() => {
     if (table.getState().pagination.pageIndex !== 0) {
       table.setPageIndex(0);
@@ -257,7 +289,12 @@ export default function TripManagementPage() {
 
   // --- Khởi tạo Tanstack Table ---
   const columns = useMemo(
-    () => getColumns(handleViewDetails, handleOpenEditForm, handleDeleteRequest),
+    () => getColumns(
+        handleViewDetails,
+        handleOpenEditForm,
+        handleDeleteRequest,
+        user ? handleOpenCreateTicketSheet : undefined
+      ),
     []
   );
 
@@ -402,7 +439,6 @@ export default function TripManagementPage() {
         <DataTablePagination table={table} />
       </div>
 
-      {/* --- Các Sheet và Dialog --- */}
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
@@ -483,6 +519,16 @@ export default function TripManagementPage() {
           onClose={() => setIsDuplicateDayOpen(false)}
           onSuccess={fetchTrips}
           sourceDate={selectedDate}
+        />
+      )}
+
+      {creatingTicketForTrip && (
+        <CreateTicketSheet
+          isOpen={isCreateTicketSheetOpen}
+          onOpenChange={setIsCreateTicketSheetOpen}
+          trip={creatingTicketForTrip}
+          userId={ticketCreationUserId}
+          onSuccess={handleTicketCreationSuccess}
         />
       )}
     </div>
