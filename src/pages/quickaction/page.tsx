@@ -33,8 +33,8 @@ export default function QuickActionsPage() {
       };
 
       const response = await quickActionAPI.getAllQuickActions(params);
-
-      setData(response.data.results);
+      console.log(response)
+      setData(response.data.docs);
       setPageCount(response.data.totalPages);
     } catch (error) {
       console.error("Failed to fetch quick actions:", error);

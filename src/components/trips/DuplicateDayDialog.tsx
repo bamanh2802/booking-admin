@@ -52,6 +52,7 @@ export function DuplicateDayDialog({
       const params = {
         page: 1,
         limit: 999,
+        roleName: 'Admin',
         day: format(sourceDate, "yyyy-MM-dd"),
       };
       const response = await tripAPI.getAllTrip(params);
