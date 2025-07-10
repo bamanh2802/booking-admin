@@ -116,7 +116,7 @@ export function CreateTicketSheet({
     if (!tripDetails || !targetUser) return;
     const promise = requestAPI.createNewRequest(
       targetUser._id, tripDetails._id, "Pending", "Book Ticket",
-      values.seats, values.passengerName, values.passengerPhone, "ONE_WAY", values.price.toString()
+      values.seats, values.passengerName, values.passengerPhone, tripDetails.type, values.price.toString()
     );
     toast.promise(promise, {
       loading: "Đang gửi yêu cầu...",
