@@ -172,36 +172,56 @@ export function TripForm({
   };
 
   const onSubmit = async (data: TripFormValues) => {
+    // Check này vẫn rất hữu ích, giữ lại
     if (isEditMode && !isDirty) {
       toast.info("Không có thay đổi để lưu.");
       return;
     }
 
-    // ✨ 3. SỬ DỤNG DAY.JS ĐỂ CHUYỂN ĐỔI MÚI GIỜ
     const timeZone = "Asia/Ho_Chi_Minh";
-
-    // dayjs(date) -> Tạo đối tượng day.js từ Date object của người dùng.
-    // .tz(timeZone, true) -> Giữ nguyên giờ:phút hiện tại, nhưng "gắn nhãn" cho nó là ở múi giờ "Asia/Ho_Chi_Minh".
-    // .toISOString() -> Chuyển đổi thành chuỗi ISO string ở múi giờ UTC tương đương.
-    const startTimeISO = dayjs(data.startTime).tz(timeZone, true).toISOString();
-    const endTimeISO = dayjs(data.endTime).tz(timeZone, true).toISOString();
-
-    const payload: any = {
-      ...data,
-      // Sử dụng các chuỗi ISO đã được chuyển đổi chính xác
-      startTime: startTimeISO,
-      endTime: endTimeISO,
-      price: data.price.toString(),
-    };
+    let payload: any; // Khai báo payload để có thể xây dựng linh hoạt
 
     if (isEditMode) {
-      payload.status = data.status;
+      // ===================================================================
+      // LOGIC CẬP NHẬT: Chỉ gửi các trường đã thay đổi
+      // ===================================================================
+      payload = {};
+      const { dirtyFields } = form.formState;
+
+      (Object.keys(dirtyFields) as Array<keyof TripFormValues>).forEach((key) => {
+        switch (key) {
+          case "startTime":
+          case "endTime":
+            const dateValue = data[key];
+            if (dateValue) {
+              payload[key] = dayjs(dateValue).tz(timeZone, true).toISOString();
+            }
+            break;
+          case "price":
+            // Chuyển đổi giá sang string
+            payload.price = data.price.toString();
+            break;
+          default:
+            // Đối với các trường còn lại, chỉ cần gán giá trị
+            payload[key] = data[key];
+            break;
+        }
+      });
     } else {
-      payload.status = "Not Started";
+      const startTimeISO = dayjs(data.startTime).tz(timeZone, true).toISOString();
+      const endTimeISO = dayjs(data.endTime).tz(timeZone, true).toISOString();
+
+      payload = {
+        ...data,
+        startTime: startTimeISO,
+        endTime: endTimeISO,
+        price: data.price.toString(),
+        status: "Not Started",
+      };
     }
 
     const promise = isEditMode
-      ? tripAPI.updateTrip(initialData._id, payload)
+      ? tripAPI.updateTrip(initialData!._id, payload) 
       : tripAPI.createTrip(payload);
 
     await toast.promise(promise, {
